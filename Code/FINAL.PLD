@@ -1,0 +1,79 @@
+Name     Final Project ;
+PartNo   ESDFinal ;
+Date     11/30/2017 ;
+Revision 01 ;
+Designer Tristan Lennertz ;
+Company  CU Boulder ;
+Assembly None ;
+Location none ;
+Device   g16v8a ;
+
+/* NOTE: 'n' preceeding signal name indicates active-low signal */
+
+/* ==== Inputs ==== */
+
+/* Top byte of 16-bit address, with don't-cares in A13-A10. 
+ * This makes the LCD take peripheral space 0x8000-0xBFFF because
+ * there's not enough IO pins to properly map without don't-cares. 
+ * This is alright, as there's only the LCD memory-mapped right now. 
+ * Safe addresses in the peripheral memory space are 0xC000-0xFFFF
+ * if future peripherals are added without modifying the LCD mapping */
+Pin 1 = A15;
+Pin 2 = A14; 
+Pin 18 = A9;
+Pin 6 = A8;
+
+/* Program read, Data read and write strobes out of microcontroller */
+Pin 5 = nRD; 
+Pin 7 = nWR;
+
+/* Inputs from typewriter keyboard keystroke wavefront latches */
+Pin 3 = ChannelAPosLatch; 
+Pin 4 = ChannelANegLatch; 
+Pin 8 = ChannelBPosLatch;
+Pin 9 = ChannelBNegLatch; 
+
+/* ===== Outputs ==== */
+
+/* WR enable signal for external RAM */ 
+Pin 17 = nWr_xram;
+
+/* RD OE signal to external RAM */
+Pin 16 = nRd_xram; 
+
+/* Read/Write Enable for LCD */
+Pin 14 = LCD_E;
+
+/* R/W signal for LCD. 1 = R, 0 = W */
+Pin 13 = LCD_RnW;
+
+/* Instruction/Data Register Selector for LCD. 1 = data, 0 = instruction */
+Pin 12 = LCD_RS;
+
+/* The coincidence signal for both channel wavefronts */ 
+Pin 15 = ChannelCoincidence; 
+
+/* The initial wavefront indicator signal from either channel */ 
+Pin 19 = WavefrontDetect; 
+
+/* ==== Logic ==== */
+/* Any of the wavefront latches will trip the wavefront detect signal */
+WavefrontDetect = ChannelAPosLatch # ChannelANegLatch # ChannelBPosLatch # ChannelBNegLatch; 
+
+/* One latch from each channel must be set to trigger the coincidence signal */
+ChannelCoincidence = (ChannelAPosLatch # ChannelANegLatch) & (ChannelBPosLatch # ChannelBNegLatch);
+
+/* 0x0000 - 0x7FFF valid write space */
+nWr_xram = A15 # nWR;
+
+/* 0x0000 - 0x7FFF valid read space */
+nRd_xram = A15 # nRD;
+
+/* Top bit of address determines whether address is within valid space */
+/* Either nWR or nRD can generate an E pulse. E is active high, so need inverse logic */
+LCD_E = A15 & (!A14) & (!(nWR & nRD));
+
+/* Bottom bits of [A15:A8] determine read/write (different mapped addresses for reading and writing) */
+/* Feed through SPLD in case I want to map to different address later, instead of direct wiring addr lines */
+LCD_RnW = A8;
+LCD_RS = A9; 
